@@ -2,97 +2,139 @@ import React, { useState } from 'react';
 import './App.css';
 
 function App() {
-  const [form, setForm] = useState({
-    study_hours: '',
-    attendance_rate: '',
-    sleep_hours: '',
-    participation: 'medium',
-    has_internet: 'yes'
+  const [formData, setFormData] = useState({
+    Age: '',
+    Gender: 'Male',
+    Height_cm: '',
+    Weight_kg: '',
+    Activity_Level: 'Sedentary',
+    Diet_Preference: 'None'
   });
 
-  const [result, setResult] = useState('');
+  const [responseData, setResponseData] = useState(null);
+  const [error, setError] = useState(null);
 
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setError(null);
+    setResponseData(null);
 
-    const res = await fetch('http://localhost:5000/predict', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(form)
-    });
+    try {
+      const response = await fetch('http://localhost:5000/predict', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...formData,
+          Age: parseInt(formData.Age),
+          Height_cm: parseFloat(formData.Height_cm),
+          Weight_kg: parseFloat(formData.Weight_kg),
+        }),
+      });
 
-    const data = await res.json();
-    setResult(`Prediction: ${data.prediction.toUpperCase()}\nMessage: ${data.message}`);
+      if (!response.ok) {
+        throw new Error(`Server returned ${response.status}`);
+      }
+
+      const data = await response.json();
+      setResponseData(data);
+    } catch (err) {
+      console.error('Error:', err);
+      setError('Something went wrong while contacting the server.');
+    }
   };
 
   return (
-    <div className="app-container">
-      <h2 className="title">Student Performance Predictor</h2>
-      <form className="student-form" onSubmit={handleSubmit}>
-        <div className="input-group">
-          <label>Study Hours per Week</label>
+    <div className="App">
+      <h1>Personalized Nutrition Planner</h1>
+
+      <form onSubmit={handleSubmit}>
+        <label>
+          Age:
           <input
             type="number"
-            name="study_hours"
-            value={form.study_hours}
+            name="Age"
+            value={formData.Age}
             onChange={handleChange}
-            placeholder="e.g., 10"
             required
           />
-        </div>
+        </label>
 
-        <div className="input-group">
-          <label>Attendance Rate (%)</label>
-          <input
-            type="number"
-            name="attendance_rate"
-            value={form.attendance_rate}
-            onChange={handleChange}
-            placeholder="e.g., 90"
-            required
-          />
-        </div>
-
-        <div className="input-group">
-          <label>Sleep Hours per Night</label>
-          <input
-            type="number"
-            name="sleep_hours"
-            value={form.sleep_hours}
-            onChange={handleChange}
-            placeholder="e.g., 7"
-            required
-          />
-        </div>
-
-        <div className="input-group">
-          <label>Class Participation</label>
-          <select name="participation" value={form.participation} onChange={handleChange}>
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
+        <label>
+          Gender:
+          <select name="Gender" value={formData.Gender} onChange={handleChange}>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
           </select>
-        </div>
+        </label>
 
-        <div className="input-group">
-          <label>Has Internet Access?</label>
-          <select name="has_internet" value={form.has_internet} onChange={handleChange}>
-            <option value="yes">Yes</option>
-            <option value="no">No</option>
+        <label>
+          Height (cm):
+          <input
+            type="number"
+            name="Height_cm"
+            value={formData.Height_cm}
+            onChange={handleChange}
+            required
+          />
+        </label>
+
+        <label>
+          Weight (kg):
+          <input
+            type="number"
+            name="Weight_kg"
+            value={formData.Weight_kg}
+            onChange={handleChange}
+            required
+          />
+        </label>
+
+        <label>
+          Activity Level:
+          <select name="Activity_Level" value={formData.Activity_Level} onChange={handleChange}>
+            <option value="Sedentary">Sedentary</option>
+            <option value="Light">Light</option>
+            <option value="Moderate">Moderate</option>
+            <option value="Active">Active</option>
+            <option value="Very Active">Very Active</option>
           </select>
-        </div>
+        </label>
 
-        <button type="submit" className="submit-button">Predict</button>
+        <label>
+          Diet Preference:
+          <select name="Diet_Preference" value={formData.Diet_Preference} onChange={handleChange}>
+            <option value="None">None</option>
+            <option value="Vegetarian">Vegetarian</option>
+            <option value="Vegan">Vegan</option>
+            <option value="Keto">Keto</option>
+            <option value="Pescatarian">Pescatarian</option>
+          </select>
+        </label>
+
+        <button type="submit">Get Recommendation</button>
       </form>
 
-      <div className="result">
-        <h3>Prediction Result:</h3>
-        <pre>{result}</pre>
-      </div>
+      {error && <p className="error">{error}</p>}
+
+      {responseData && (
+        <div className="result">
+          <h2>Results</h2>
+          <p><strong>BMI:</strong> {responseData.BMI}</p>
+          <p><strong>Goal:</strong> {responseData.Goal}</p>
+          <p><strong>Calories:</strong> {responseData.Recommended_Calories} kcal</p>
+          <p><strong>Protein:</strong> {responseData.Recommended_Protein} g</p>
+          <p><strong>Carbs:</strong> {responseData.Recommended_Carbs} g</p>
+          <p><strong>Fats:</strong> {responseData.Recommended_Fats} g</p>
+          <p><strong>Meal Plan:</strong> {responseData.Recommended_Meal_Plan}</p>
+        </div>
+      )}
     </div>
   );
 }
